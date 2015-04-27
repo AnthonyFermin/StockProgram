@@ -95,11 +95,7 @@ public class Main {
         return data;
     }
 
-    public static void main(String[] args) {
-
-        // file path of original CSV file with stock info
-        String filePath = "/Users/c4q-anthonyf/Desktop/School/MAC286/StockProgram/src/nyc/lagcc/mac286/MondayGroup/tsla.csv";
-        ArrayList<ArrayList<String>> table = fileParser(filePath);
+    public static void populateSMA(ArrayList<ArrayList<String>> table){
 
         // Adds 20 Day SMA and 50 Day SMA columns to first Line
         ArrayList<String> firstLine = table.get(0);
@@ -144,8 +140,12 @@ public class Main {
             currentLine.add(Double.toString(average));
         }
 
+    }
+
+    public static void addTradeColumn(ArrayList<ArrayList<String>> table){
+
         // adds new column called "Trade"
-        firstLine = table.get(0);
+        ArrayList<String> firstLine = table.get(0);
         firstLine.add("Trade");
 
         // fills first two lines with blank cells
@@ -158,10 +158,11 @@ public class Main {
          * Labels cell as "Trade" if pattern is found
          * Example Pattern: =IF(C60<C59,IF(D60<D59,IF(D61>C60,"trade","n"),"n"),"n”)   w/0 Bull case
          */
-        for(int i = 3; i < table.size(); i++){
+        for(int i = 3; i < table.size(); i++)
+        {
             ArrayList<String> currentLine = table.get(i);
-            ArrayList<String> twoDaysBeforeLine = table.get(i-2);
-            ArrayList<String> oneDayBeforeLine = table.get(i-1);
+            ArrayList<String> twoDaysBeforeLine = table.get(i - 2);
+            ArrayList<String> oneDayBeforeLine = table.get(i - 1);
 
             // storing and parsing info from each of the necessary cells
             double columnCTwoDaysBefore = Double.parseDouble(twoDaysBeforeLine.get(2));
@@ -171,19 +172,27 @@ public class Main {
             double columnDCurrentDay = Double.parseDouble(currentLine.get(3));
 
             // if statement checks for pattern and labels current cell with "TRADE" if found or blank if not
-            if(columnCOneDayBefore < columnCTwoDaysBefore
-                    && columnDOneDayBefore < columnDTwoDaysBefore
-                    && columnDCurrentDay > columnCOneDayBefore){
-
+            if(columnCOneDayBefore < columnCTwoDaysBefore && columnDOneDayBefore < columnDTwoDaysBefore && columnDCurrentDay > columnCOneDayBefore)
+            {
                 currentLine.add("TRADE");
-
-            }else{
+            }
+            else
+            {
                 currentLine.add("");
             }
-
         }
 
-        generateCsvFile(table);
+
+    }
+
+    public static void main(String[] args) {
+
+        // file path of original CSV file with stock info
+        String filePath = "/Users/c4q-anthonyf/Desktop/School/MAC286/StockProgram/src/nyc/lagcc/mac286/MondayGroup/tsla.csv";
+        ArrayList<ArrayList<String>> tslaTable = fileParser(filePath);
+        populateSMA(tslaTable);
+        addTradeColumn(tslaTable);
+        generateCsvFile(tslaTable);
 
     }
 }
