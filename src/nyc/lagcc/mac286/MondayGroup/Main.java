@@ -16,12 +16,12 @@ import java.util.Scanner;
 public class Main {
 
     // generates a CSV file using an ArrayList<ArrayList<String>> data structure
-    private static void generateCsvFile(ArrayList<ArrayList<String>> completeData)
+    private static void generateCsvFile(ArrayList<ArrayList<String>> completeData, String fileName)
     {
         try
         {
             // directory and filename of new csv file to be created
-            FileWriter writer = new FileWriter("/Users/c4q-anthonyf/Desktop/School/MAC286/StockProgram/src/nyc/lagcc/mac286/MondayGroup/tslaComplete.csv");
+            FileWriter writer = new FileWriter("/Users/c4q-anthonyf/Desktop/School/MAC286/StockProgram/res/" + fileName + ".csv");
 
             // loops through each line of data
             for(int i = 0; i < completeData.size(); i++)
@@ -46,7 +46,7 @@ public class Main {
                 }
             }
 
-            // finishes creation of csv file
+            // completes creation of csv file
             writer.flush();
             writer.close();
         }
@@ -72,7 +72,7 @@ public class Main {
 
             while(dataSearch.hasNextLine()) {
 
-                // splits current line into columns
+                // splits currentLine into array by commas (columns)
                 String[] columns = dataSearch.nextLine().split(",");
 
 
@@ -102,6 +102,10 @@ public class Main {
         firstLine.add("20 Day SMA");
         firstLine.add("50 Day SMA");
 
+        for(int i = 1; i < 20; i++){
+            ArrayList<String> currentLine = table.get(i);
+            currentLine.add("");
+        }
 
         // computing and adding 20 day SMA
         for(int i = 20; i < table.size(); i++ ){
@@ -121,6 +125,10 @@ public class Main {
             currentLine.add(Double.toString(average));
         }
 
+        for(int i = 1; i < 50; i++){
+            ArrayList<String> currentLine = table.get(i);
+            currentLine.add("");
+        }
 
         // computing and adding 50 day SMA
         for(int i = 50; i < table.size(); i++ ){
@@ -160,39 +168,288 @@ public class Main {
          */
         for(int i = 3; i < table.size(); i++)
         {
-            ArrayList<String> currentLine = table.get(i);
-            ArrayList<String> twoDaysBeforeLine = table.get(i - 2);
-            ArrayList<String> oneDayBeforeLine = table.get(i - 1);
+            ArrayList<String> currentDay = table.get(i);
+            ArrayList<String> twoDaysBefore = table.get(i - 2);
+            ArrayList<String> oneDayBefore = table.get(i - 1);
 
             // storing and parsing info from each of the necessary cells
-            double columnCTwoDaysBefore = Double.parseDouble(twoDaysBeforeLine.get(2));
-            double columnDTwoDaysBefore = Double.parseDouble(twoDaysBeforeLine.get(3));
-            double columnCOneDayBefore = Double.parseDouble(oneDayBeforeLine.get(2));
-            double columnDOneDayBefore = Double.parseDouble(oneDayBeforeLine.get(3));
-            double columnDCurrentDay = Double.parseDouble(currentLine.get(3));
+            double highTwoDaysBefore = Double.parseDouble(twoDaysBefore.get(2));
+            double lowTwoDaysBefore = Double.parseDouble(twoDaysBefore.get(3));
+            double highPrevDay = Double.parseDouble(oneDayBefore.get(2));
+            double lowPrevDay = Double.parseDouble(oneDayBefore.get(3));
+            double highCurrentDay = Double.parseDouble(currentDay.get(3));
 
             // if statement checks for pattern and labels current cell with "TRADE" if found or blank if not
-            if(columnCOneDayBefore < columnCTwoDaysBefore && columnDOneDayBefore < columnDTwoDaysBefore && columnDCurrentDay > columnCOneDayBefore)
+            if(highPrevDay < highTwoDaysBefore && lowPrevDay < lowTwoDaysBefore && highCurrentDay > highPrevDay)
             {
-                currentLine.add("TRADE");
+                currentDay.add("TRADE");
             }
             else
             {
-                currentLine.add("");
+                currentDay.add("");
+            }
+        }
+    }
+
+    public static ArrayList<ArrayList<String>> generateProfitLoss(ArrayList<ArrayList<String>> completeTable){
+
+        double sumOfPercent = 0.0;
+        int numOfWinners = 0;
+        int numOfLosers = 0;
+        String tradeCloseAmt = "";
+
+        ArrayList<ArrayList<String>> tradeTable = new ArrayList<ArrayList<String>>();
+
+        ArrayList<String> firstLine = new ArrayList<String>();
+        firstLine.add("Date of Trade");
+        firstLine.add("Entry Point");
+        firstLine.add("Take Profit");
+        firstLine.add("Stop Loss");
+        firstLine.add("Date Closed");
+        firstLine.add("Trade Close");
+        firstLine.add("Win/Loss");
+        firstLine.add("Percent Win/Loss");
+        tradeTable.add(firstLine);
+
+        for(int i = 1; i < completeTable.size(); i++)
+        {
+
+            ArrayList<String> currentLine = completeTable.get(i);
+            if(currentLine.get(9).equalsIgnoreCase("TRADE") && completeTable.size() > i){
+                ArrayList<String> nextLine = completeTable.get(i+1);
+                ArrayList<String> tradeLine = new ArrayList<String>();
+                ArrayList<String> secondCandle = completeTable.get(i-1);
+
+                tradeLine.add(nextLine.get(0)); //date of trade
+
+                double entryPoint = Double.parseDouble(nextLine.get(1));
+                entryPoint = (double) Math.round(entryPoint * 10000) / 10000;
+                tradeLine.add(nextLine.get(1)); //entry point (open of next day)
+
+                double takeProfit = entryPoint + (entryPoint * .06);
+                takeProfit = (double)Math.round(takeProfit * 10000) / 10000;
+                tradeLine.add(Double.toString(takeProfit));
+
+                double stopLoss = entryPoint - (entryPoint * .05);
+                stopLoss = (double)Math.round(stopLoss * 10000) / 10000;
+                tradeLine.add(Double.toString(stopLoss));
+
+                Double winLoss = null;
+                String closeDate = "";
+
+                for(int j = 0; j < completeTable.size() - i; j++)
+                {
+                    ArrayList<String> lineToCheck = completeTable.get(i+j);
+                    double checkOpen = Double.parseDouble(lineToCheck.get(1));
+                    double checkClose = Double.parseDouble(lineToCheck.get(4));
+                    double checkHigh = Double.parseDouble(lineToCheck.get(2));
+                    double checkLow = Double.parseDouble(lineToCheck.get(3));
+                    closeDate = lineToCheck.get(0);
+
+                    if(checkOpen >= takeProfit){
+                        winLoss = checkOpen - entryPoint;
+                        tradeCloseAmt = lineToCheck.get(1);
+                        numOfWinners++;
+                        break;
+                    }else if(checkHigh >= takeProfit){
+                        winLoss = checkHigh - entryPoint;
+                        tradeCloseAmt = lineToCheck.get(2);
+                        numOfWinners++;
+                        break;
+                    }else if(checkClose >= takeProfit){
+                        winLoss = checkClose - entryPoint;
+                        tradeCloseAmt = lineToCheck.get(4);
+                        numOfWinners++;
+                        break;
+                    }else if(checkOpen <= stopLoss){
+                        winLoss = checkOpen - entryPoint;
+                        tradeCloseAmt = lineToCheck.get(1);
+                        numOfLosers++;
+                        break;
+                    }else if(checkLow <= stopLoss){
+                        winLoss = checkLow - entryPoint;
+                        tradeCloseAmt = lineToCheck.get(3);
+                        numOfLosers++;
+                        break;
+                    }else if(checkClose <= stopLoss){
+                        winLoss = checkClose - entryPoint;
+                        tradeCloseAmt = lineToCheck.get(4);
+                        numOfLosers++;
+                        break;
+                    }
+
+                }
+
+                if(winLoss == null){
+                    tradeLine.add("Trade in Progress");
+                    tradeLine.add("N/A");
+                    tradeLine.add("N/A");
+                    tradeLine.add("N/A");
+                }else{
+
+                    tradeLine.add(closeDate);
+                    tradeLine.add(tradeCloseAmt);
+
+                    winLoss = (double) Math.round(winLoss * 10000) / 10000;
+                    tradeLine.add(Double.toString(winLoss));
+                    double percentChange = winLoss * 100 / entryPoint;
+
+                    if(!(i-2 < 20 || i-2 < 50))
+                    {
+                        double twentySMA = Double.parseDouble(secondCandle.get(7));
+                        double fiftySMA = Double.parseDouble(secondCandle.get(8));
+
+                        System.out.println(fiftySMA);
+                        if(twentySMA < fiftySMA)
+                        {
+                            percentChange = percentChange * (- 1);
+
+                            if(percentChange > 0)
+                            {
+                                numOfWinners++;
+                                numOfLosers--;
+                            }
+                            else if(percentChange < 0)
+                            {
+                                numOfWinners--;
+                                numOfLosers++;
+                            }
+                        }
+                    }
+
+                    sumOfPercent += percentChange;
+
+                    percentChange = (double)Math.round(percentChange * 10000) / 10000;
+                    tradeLine.add(Double.toString(percentChange) + " %");
+                }
+
+                tradeTable.add(tradeLine);
             }
         }
 
+        ArrayList<String> emptyLine = new ArrayList<String>();
+        for(int i = 0; i < 7; i++)
+        {
+            emptyLine.add("");
+        }
+
+        tradeTable.add(emptyLine);
+
+        ArrayList<String> winnerLine = new ArrayList<String>();
+        winnerLine.add("Number of Winners:");
+        winnerLine.add(Integer.toString(numOfWinners));
+        tradeTable.add(winnerLine);
+
+        ArrayList<String> loserLine = new ArrayList<String>();
+        loserLine.add("Number of Losers:");
+        loserLine.add(Integer.toString(numOfLosers));
+        tradeTable.add(loserLine);
+
+        ArrayList<String> avgPercent = new ArrayList<String>();
+        avgPercent.add("Average Percent Change:");
+        int totalTrades = numOfLosers + numOfWinners;
+        double avgPercentChange = sumOfPercent / totalTrades;
+        avgPercentChange = (double)Math.round(avgPercentChange * 10000) / 10000;
+        avgPercent.add(Double.toString(avgPercentChange) + " %");
+        tradeTable.add(avgPercent);
+
+
+        return tradeTable;
+    }
+
+    public static ArrayList<ArrayList<String>> reverseTable(ArrayList<ArrayList<String>> table){
+
+        ArrayList<ArrayList<String>> revTable = new ArrayList<ArrayList<String>>();
+
+        revTable.add(table.get(0));
+
+        for(int i = table.size() - 1; i > 0 ; i--)
+        {
+            revTable.add(table.get(i));
+        }
+
+        return revTable;
 
     }
 
     public static void main(String[] args) {
 
         // file path of original CSV file with stock info
-        String filePath = "/Users/c4q-anthonyf/Desktop/School/MAC286/StockProgram/src/nyc/lagcc/mac286/MondayGroup/tsla.csv";
-        ArrayList<ArrayList<String>> tslaTable = fileParser(filePath);
+
+        String bbyPath = "/Users/c4q-anthonyf/Desktop/School/MAC286/StockProgram/res/bby.csv";
+        ArrayList<ArrayList<String>> bbyTable = fileParser(bbyPath);
+        populateSMA(bbyTable);
+        addTradeColumn(bbyTable);
+        generateCsvFile(bbyTable, "bbyComplete");
+        generateCsvFile(generateProfitLoss(bbyTable), "bbyWinLoss");
+
+        String cscoPath = "/Users/c4q-anthonyf/Desktop/School/MAC286/StockProgram/res/csco.csv";
+        ArrayList<ArrayList<String>> cscoTable = fileParser(cscoPath);
+        populateSMA(cscoTable);
+        addTradeColumn(cscoTable);
+        generateCsvFile(cscoTable, "cscoComplete");
+        generateCsvFile(generateProfitLoss(cscoTable), "cscoWinLoss");
+
+        String dowPath = "/Users/c4q-anthonyf/Desktop/School/MAC286/StockProgram/res/dow.csv";
+        ArrayList<ArrayList<String>> dowTable = fileParser(dowPath);
+        populateSMA(dowTable);
+        addTradeColumn(dowTable);
+        generateCsvFile(dowTable, "dowComplete");
+        generateCsvFile(generateProfitLoss(dowTable), "dowWinLoss");
+
+        String jpmPath = "/Users/c4q-anthonyf/Desktop/School/MAC286/StockProgram/res/jpm.csv";
+        ArrayList<ArrayList<String>> jpmTable = fileParser(jpmPath);
+        populateSMA(jpmTable);
+        addTradeColumn(jpmTable);
+        generateCsvFile(jpmTable, "jpmComplete");
+        generateCsvFile(generateProfitLoss(jpmTable), "jpmWinLoss");
+
+        String msftPath = "/Users/c4q-anthonyf/Desktop/School/MAC286/StockProgram/res/msft.csv";
+        ArrayList<ArrayList<String>> msftTable = fileParser(msftPath);
+        populateSMA(msftTable);
+        addTradeColumn(msftTable);
+        generateCsvFile(msftTable, "msftComplete");
+        generateCsvFile(generateProfitLoss(msftTable), "msftWinLoss");
+
+
+        String tslaPath = "/Users/c4q-anthonyf/Desktop/School/MAC286/StockProgram/res/tsla.csv";
+        ArrayList<ArrayList<String>> tslaTable = fileParser(tslaPath);
         populateSMA(tslaTable);
         addTradeColumn(tslaTable);
-        generateCsvFile(tslaTable);
+        generateCsvFile(tslaTable, "tslaComplete");
+        generateCsvFile(generateProfitLoss(tslaTable), "tslaWinLoss");
+
+        String ibmPath = "/Users/c4q-anthonyf/Desktop/School/MAC286/StockProgram/res/ibm.csv";
+        ArrayList<ArrayList<String>> ibmTable = fileParser(ibmPath);
+        populateSMA(ibmTable);
+        addTradeColumn(ibmTable);
+        generateCsvFile(ibmTable, "ibmComplete");
+        generateCsvFile(generateProfitLoss(ibmTable), "ibmWinLoss");
+
+        String gldPath = "/Users/c4q-anthonyf/Desktop/School/MAC286/StockProgram/res/gld.csv";
+        ArrayList<ArrayList<String>> gldTable = fileParser(gldPath);
+        populateSMA(gldTable);
+        addTradeColumn(gldTable);
+        generateCsvFile(gldTable, "gldComplete");
+        generateCsvFile(generateProfitLoss(gldTable), "gldWinLoss");
+
+        String glwPath = "/Users/c4q-anthonyf/Desktop/School/MAC286/StockProgram/res/glw.csv";
+        ArrayList<ArrayList<String>> glwTable = fileParser(glwPath);
+        populateSMA(glwTable);
+        addTradeColumn(glwTable);
+        generateCsvFile(glwTable, "glwComplete");
+        generateCsvFile(generateProfitLoss(glwTable), "glwWinLoss");
+
+        String nflxPath = "/Users/c4q-anthonyf/Desktop/School/MAC286/StockProgram/res/nflx.csv";
+        ArrayList<ArrayList<String>> nflxTable = fileParser(nflxPath);
+        populateSMA(nflxTable);
+        addTradeColumn(nflxTable);
+        generateCsvFile(nflxTable, "nflxComplete");
+        generateCsvFile(generateProfitLoss(nflxTable), "nflxWinLoss");
+
+
+
+
 
     }
 }
